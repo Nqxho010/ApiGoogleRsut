@@ -1,21 +1,8 @@
 [package]
-name = "gmail_rust_connect"
+name = "gmail_rust"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-# Cliente oficial generado para la API de Gmail v1 (Actualizado a v7)
-google-gmail1 = "7.0"
-
-# Biblioteca estándar para flujos de autenticación OAuth2 (Actualizado a v12)
-yup-oauth2 = "12.1"
-
-# Runtime asíncrono obligatorio para ejecutar el código
-tokio = { version = "1.0", features = ["full"] }
-
-# Manejo de formatos de datos JSON
-serde_json = "1.0"
-
-# Componentes de red compatibles con Hyper 1.0 y Google Client
-hyper-util = { version = "0.1", features = ["full"] }
-hyper = { version = "1.0", features = ["full"] }
+google-gmail1 = "7.0.0"
+tokio = { version = "1", features = ["full"] }

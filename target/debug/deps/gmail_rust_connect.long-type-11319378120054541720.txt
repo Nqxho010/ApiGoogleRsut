@@ -1,1 +1,0 @@
-AuthenticatorBuilder<DefaultHyperClientBuilder, yup_oauth2::installed::InstalledFlow>
