@@ -1,4 +1,4 @@
-# Gmail Email Manager
+# Gmail Email Manager with RUST
 
 A desktop application built with **Rust** that integrates with the **Google Gmail API** to search and manage emails directly from a local environment.
 
