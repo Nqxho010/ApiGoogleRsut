@@ -1,6 +1,6 @@
 # Gmail Email Manager with RUST
 
-A desktop application built with **Rust** that integrates with the **Google Gmail API** to search and manage emails directly from a local environment.
+A command-line application built with **Rust** that integrates with the **Google Gmail API** to search and manage emails directly from a local environment.
 
 The project was created to provide a simple and controlled way to search for emails using Gmail search queries and move matching messages to the Gmail Trash after user confirmation.
 
@@ -13,10 +13,10 @@ Once authenticated, the application:
 1. Connects to the user's Gmail account
 2. Retrieves the authenticated user's Gmail profile
 3. Accepts a Gmail search query
-4. Retrieves messages matching the query
-5. Displays the number of matching emails
+4. Retrieves all messages matching the query (following every result page)
+5. Displays the number of matching emails and a preview of the first ones
 6. Requests confirmation before making changes
-7. Moves the selected messages to the Gmail Trash
+7. Moves the matching messages to the Gmail Trash in batches
 
 The project focuses on learning and implementing API integration, OAuth authentication, asynchronous programming, and interaction with external cloud services using Rust.
 
@@ -71,9 +71,11 @@ The project focuses on learning and implementing API integration, OAuth authenti
 * Integration with the Gmail API
 * Gmail profile verification
 * Support for Gmail search queries
-* Retrieval of matching email messages
+* Retrieval of every matching email message, with pagination
+* Preview (date, sender and subject) of the first matching emails
 * User confirmation before modifying emails
-* Batch processing of matching messages
+* Dry-run mode to search and preview without modifying anything
+* Batch processing of matching messages (up to 1000 per request)
 * Moving emails to the Gmail Trash
 * Local token persistence for subsequent authentications
 * Asynchronous API communication
@@ -129,7 +131,6 @@ Before running the project, make sure you have:
 
 * [Rust](https://www.rust-lang.org/) installed
 * Cargo installed with Rust
-* Node.js if required by the project interface/build environment
 * A Google account with Gmail
 * A Google Cloud project with the Gmail API enabled
 * OAuth 2.0 credentials
@@ -161,11 +162,13 @@ Install and compile the project dependencies:
 cargo build
 ```
 
-Place the Google OAuth credentials file in the appropriate project location:
+Place the Google OAuth credentials file in the project root:
 
 ```text
 credentials.json
 ```
+
+This file is ignored by Git and must never be committed.
 
 Then run the application:
 
@@ -176,6 +179,24 @@ cargo run
 ## Usage
 
 When the application starts, it initializes the Google authentication process.
+
+### Command-line options
+
+| Option                 | Description                                              |
+| ---------------------- | -------------------------------------------------------- |
+| `-q`, `--query <QUERY>` | Gmail search query (asked interactively if omitted)      |
+| `--dry-run`            | Search and preview only, without modifying any email     |
+| `-y`, `--yes`          | Skip the confirmation prompt                             |
+| `--credentials <PATH>` | OAuth client file (default: `credentials.json`)          |
+| `--token <PATH>`       | Where the OAuth token is stored (default: `token.json`)  |
+
+Example, to check what a query would match without changing anything:
+
+```bash
+cargo run -- --query "older_than:1y" --dry-run
+```
+
+The program exits with a non-zero status if any email could not be moved to the Trash.
 
 ### 1. Authenticate with Google
 
@@ -193,7 +214,7 @@ from:example@gmail.com
 
 ### 3. Review the Results
 
-The application queries the Gmail API and retrieves the messages that match the search criteria.
+The application queries the Gmail API, retrieves the messages that match the search criteria, and shows the date, sender and subject of the first 10.
 
 ### 4. Confirm the Action
 
@@ -212,6 +233,7 @@ If the operation is cancelled, no changes are made.
 | **Google OAuth 2.0** | User authentication and authorization         |
 | **Tokio**            | Asynchronous runtime                          |
 | **Hyper**            | HTTP communication                            |
+| **Clap**             | Command-line argument parsing                 |
 | **Cargo**            | Rust package management and build system      |
 
 ## Project Structure
@@ -219,15 +241,17 @@ If the operation is cancelled, no changes are made.
 ```text
 ApiGoogleRsut/
 │
+├── .github/workflows/rust.yml
 ├── src/
-│   └── ...
+│   └── main.rs
 │
+├── .gitignore
 ├── Cargo.toml
 ├── Cargo.lock
-├── credentials.json
-├── README.md
-└── target/
+└── README.md
 ```
+
+`credentials.json`, `token.json` and `target/` live in the project root locally but are ignored by Git.
 
 The `src` directory contains the Rust application source code, while `Cargo.toml` defines the project's dependencies and configuration.
 
@@ -242,18 +266,9 @@ credentials.json
 token.json
 ```
 
-If these files are currently tracked by Git, they should be removed from the repository and added to `.gitignore`.
+Both are listed in `.gitignore`. If a credentials file was ever committed, removing it is not enough because it stays in the Git history: reset the client secret in the Google Cloud Console.
 
-Example:
-
-```gitignore
-credentials.json
-token.json
-.env
-target/
-```
-
-OAuth permissions should also be limited to the minimum Gmail scopes required by the application.
+The application only requests the `gmail.modify` scope, which allows moving messages to the Trash but not deleting them permanently.
 
 ## Current Limitations
 
@@ -262,11 +277,9 @@ The current version is primarily focused on Gmail API integration, authenticatio
 Potential future improvements include:
 
 * Graphical desktop interface
-* Email preview before deletion
 * Advanced filtering options
 * Bulk selection controls
 * Undo functionality
-* Better error handling and user feedback
 * Improved authentication management
 * Packaging the application as a standalone desktop executable
 

@@ -1,0 +1,7 @@
+# Build output
+target/
+
+# Google OAuth secrets
+credentials.json
+token.json
+.env
