@@ -1,4 +1,4 @@
-use gmail_rust::{EmailPreview, Hub};
+use gmail_rust::{EmailPreview, Hub, TrashReport};
 use tauri::Manager;
 
 // Guarda la conexion a Gmail para que la usen todos los comandos
@@ -32,7 +32,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .manage(AppState::default())
-        .invoke_handler(tauri::generate_handler![connect, search, previews])
+        .invoke_handler(tauri::generate_handler![connect, search, previews, trash])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
@@ -63,4 +63,11 @@ async fn previews(
     }
 
     Ok(emails)
+}
+
+#[tauri::command]
+async fn trash(ids: Vec<String>, state: tauri::State<'_, AppState>) -> Result<TrashReport, String> {
+    let hub = state.0.lock().await.clone().ok_or("No se ha conectado a Gmail")?;
+
+    Ok(gmail_rust::trash_messages(&hub, &ids).await)
 }

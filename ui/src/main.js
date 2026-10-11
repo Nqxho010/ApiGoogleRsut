@@ -18,6 +18,7 @@ window.addEventListener("DOMContentLoaded", () => {
   const result = document.querySelector("#result");
   const rows = document.querySelector("#rows");
   const moreBtn = document.querySelector("#more-btn");
+  const trashBtn = document.querySelector("#trash-btn");
   const selectAll = document.querySelector("#select-all");
   let ids = [];
   let shown = 0;
@@ -70,5 +71,42 @@ window.addEventListener("DOMContentLoaded", () => {
     for (const box of rows.querySelectorAll("input")) {
       box.checked = selectAll.checked;
     }
+  });
+
+  // Mueve a la papelera solo los correos con la casilla marcada
+  trashBtn.addEventListener("click", async () => {
+    const boxes = [...rows.querySelectorAll("input:checked")];
+
+    if (boxes.length === 0) {
+      result.textContent = "No hay correos seleccionados.";
+      return;
+    }
+
+    if (!confirm("¿Mover " + boxes.length + " correo(s) a la papelera?")) {
+      return;
+    }
+
+    trashBtn.disabled = true;
+    result.textContent = "Moviendo a la papelera...";
+    try {
+      const report = await invoke("trash", { ids: boxes.map((box) => box.value) });
+      const failed = new Set(report.failed.map((failure) => failure.id));
+
+      // Quita de la tabla los que si se movieron
+      for (const box of boxes) {
+        if (!failed.has(box.value)) {
+          ids = ids.filter((id) => id !== box.value);
+          shown -= 1;
+          box.closest("tr").remove();
+        }
+      }
+
+      selectAll.checked = false;
+      result.textContent =
+        "Movidos a la papelera: " + report.moved + ". Fallidos: " + report.failed.length + ".";
+    } catch (error) {
+      result.textContent = "Error: " + error;
+    }
+    trashBtn.disabled = false;
   });
 });
