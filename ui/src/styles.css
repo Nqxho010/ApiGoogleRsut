@@ -109,4 +109,18 @@ button {
   button:active {
     background-color: #0f0f0f69;
   }
+
+  #emails {
+    width: 100%;
+    margin-top: 1em;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 0.85em;
+  }
+  
+  #emails th,
+  #emails td {
+    padding: 4px 8px;
+    border-bottom: 1px solid #8884;
+  }
 }

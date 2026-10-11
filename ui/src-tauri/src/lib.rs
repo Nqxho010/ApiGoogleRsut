@@ -1,4 +1,4 @@
-use gmail_rust::Hub;
+use gmail_rust::{EmailPreview, Hub};
 use tauri::Manager;
 
 // Guarda la conexion a Gmail para que la usen todos los comandos
@@ -32,7 +32,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .manage(AppState::default())
-        .invoke_handler(tauri::generate_handler![connect, search])
+        .invoke_handler(tauri::generate_handler![connect, search, previews])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
@@ -44,4 +44,23 @@ async fn search(query: String, state: tauri::State<'_, AppState>) -> Result<Vec<
     gmail_rust::search_messages(&hub, &query)
         .await
         .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn previews(
+    ids: Vec<String>,
+    state: tauri::State<'_, AppState>,
+) -> Result<Vec<EmailPreview>, String> {
+    let hub = state.0.lock().await.clone().ok_or("No se ha conectado a Gmail")?;
+    let mut emails = Vec::new();
+
+    for id in &ids {
+        emails.push(
+            gmail_rust::fetch_preview(&hub, id)
+                .await
+                .map_err(|e| e.to_string())?,
+        );
+    }
+
+    Ok(emails)
 }
