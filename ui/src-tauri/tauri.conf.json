@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "ui",
+  "productName": "Gmail Manager",
   "version": "0.1.0",
-  "identifier": "com.personal.ui",
+  "identifier": "com.nqxho010.gmailmanager",
   "build": {
     "frontendDist": "../src"
   },
@@ -10,7 +10,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "ui",
+        "title": "Gmail Manager",
         "width": 800,
         "height": 600
       }
