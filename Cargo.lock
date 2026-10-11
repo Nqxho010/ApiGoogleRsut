@@ -397,6 +397,7 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "google-gmail1",
+ "serde",
  "tokio",
 ]
 
