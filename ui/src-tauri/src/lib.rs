@@ -32,7 +32,16 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .manage(AppState::default())
-        .invoke_handler(tauri::generate_handler![connect])
+        .invoke_handler(tauri::generate_handler![connect, search])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[tauri::command]
+async fn search(query: String, state: tauri::State<'_, AppState>) -> Result<Vec<String>, String> {
+    let hub = state.0.lock().await.clone().ok_or("No se ha conectado a Gmail")?;
+
+    gmail_rust::search_messages(&hub, &query)
+        .await
+        .map_err(|e| e.to_string())
 }

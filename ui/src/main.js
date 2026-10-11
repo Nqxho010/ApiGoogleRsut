@@ -12,4 +12,18 @@ window.addEventListener("DOMContentLoaded", () => {
       status.textContent = "Error: " + error;
     }
   });
+
+  const result = document.querySelector("#result");
+  let ids = [];
+
+  document.querySelector("#search-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    result.textContent = "Buscando...";
+    try {
+      ids = await invoke("search", { query: document.querySelector("#query").value });
+      result.textContent = "Se encontraron " + ids.length + " correos.";
+    } catch (error) {
+      result.textContent = "Error: " + error;
+    }
+  });
 });
