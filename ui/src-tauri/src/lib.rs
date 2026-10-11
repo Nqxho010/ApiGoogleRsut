@@ -1,14 +1,38 @@
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
+use gmail_rust::Hub;
+use tauri::Manager;
+
+// Guarda la conexion a Gmail para que la usen todos los comandos
+#[derive(Default)]
+struct AppState(tokio::sync::Mutex<Option<Hub>>);
+
 #[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
+async fn connect(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, AppState>,
+) -> Result<String, String> {
+    let dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    let credentials = dir.join("credentials.json");
+    let token = dir.join("token.json");
+
+    let hub = gmail_rust::build_hub(&credentials.to_string_lossy(), &token.to_string_lossy())
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let email = gmail_rust::profile_email(&hub)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    *state.0.lock().await = Some(hub);
+
+    Ok(email)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet])
+        .manage(AppState::default())
+        .invoke_handler(tauri::generate_handler![connect])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
