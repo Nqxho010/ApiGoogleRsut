@@ -1,37 +1,56 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
     <link rel="stylesheet" href="styles.css" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tauri App</title>
+    <title>Gmail Manager</title>
     <script type="module" src="/main.js" defer></script>
   </head>
 
   <body>
-    <main class="container">
-      <h1>Welcome to Tauri</h1>
+    <header class="topbar">
+      <h1>Gmail Manager</h1>
+      <div class="account">
+        <span id="status" class="badge">Sin conectar</span>
+        <button id="connect-btn">Conectar con Gmail</button>
+      </div>
+    </header>
 
-      <button id="connect-btn">Conectar con Gmail</button>
-      <p id="status"></p>
-      <form id="search-form">
-        <input id="query" placeholder="from:linkedin.com older_than:1y" />
-        <button type="submit">Buscar</button>
+    <main>
+      <form id="search-form" class="search">
+        <input id="query" placeholder="from:linkedin.com older_than:1y" autocomplete="off" />
+        <button type="submit" class="primary">Buscar</button>
       </form>
-      <p id="result"></p>
+
+      <div id="chips" class="chips">
+        <button type="button" class="chip">is:unread</button>
+        <button type="button" class="chip">older_than:1y</button>
+        <button type="button" class="chip">category:promotions</button>
+        <button type="button" class="chip">has:attachment</button>
+      </div>
+
+      <div class="actions">
+        <div>
+          <span id="result">Busca correos para empezar.</span>
+          <span id="selected"></span>
+        </div>
+        <button id="trash-btn" class="danger" disabled>Mover a la papelera</button>
+      </div>
+
       <table id="emails">
         <thead>
           <tr>
-            <th><input type="checkbox" id="select-all" /></th>
-            <th>Fecha</th>
-            <th>De</th>
+            <th class="col-check"><input type="checkbox" id="select-all" /></th>
+            <th class="col-from">De</th>
             <th>Asunto</th>
+            <th class="col-date">Fecha</th>
           </tr>
         </thead>
         <tbody id="rows"></tbody>
       </table>
+
       <button id="more-btn" style="display: none">Cargar más</button>
-      <button id="trash-btn">Mover seleccionados a la papelera</button>
     </main>
   </body>
 </html>

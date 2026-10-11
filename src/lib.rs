@@ -42,6 +42,25 @@ pub struct TrashReport {
 // Authentication and Gmail client
 // ----------------------------------------
 
+// Abre el navegador con la pagina de permiso de Google
+struct BrowserDelegate;
+
+impl yup_oauth2::authenticator_delegate::InstalledFlowDelegate for BrowserDelegate {
+    fn present_user_url<'a>(
+        &'a self,
+        url: &'a str,
+        _need_code: bool,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<String, String>> + Send + 'a>>
+    {
+        Box::pin(async move {
+            // Si el navegador no abre, el enlace queda en la consola
+            println!("Open this link to authorize the app:\n{}", url);
+            let _ = open::that(url);
+            Ok(String::new())
+        })
+    }
+}
+
 pub async fn build_hub(credentials_path: &str, token_path: &str) -> AppResult<Hub> {
     let secret = yup_oauth2::read_application_secret(credentials_path)
         .await
@@ -63,6 +82,7 @@ pub async fn build_hub(credentials_path: &str, token_path: &str) -> AppResult<Hu
         ),
     )
     .persist_tokens_to_disk(token_path) //guarda todos los tokens aqui
+    .flow_delegate(Box::new(BrowserDelegate))
     .build()
     .await?;
 

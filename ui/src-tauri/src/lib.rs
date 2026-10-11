@@ -27,12 +27,26 @@ async fn connect(
     Ok(email)
 }
 
+// Dice si ya hay un token guardado, para conectar sin abrir el navegador
+#[tauri::command]
+fn is_authorized(app: tauri::AppHandle) -> Result<bool, String> {
+    let dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+
+    Ok(dir.join("token.json").exists())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .manage(AppState::default())
-        .invoke_handler(tauri::generate_handler![connect, search, previews, trash])
+        .invoke_handler(tauri::generate_handler![
+            connect,
+            is_authorized,
+            search,
+            previews,
+            trash
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
