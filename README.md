@@ -1,42 +1,47 @@
-# Gmail Email Manager with RUST
+# Gmail Manager
 
-A command-line application built with **Rust** that integrates with the **Google Gmail API** to search and manage emails directly from a local environment.
+A **Rust** application that connects to the **Gmail API** to search emails with Gmail's own query syntax and move the ones you choose to the Trash.
 
-The project was created to provide a simple and controlled way to search for emails using Gmail search queries and move matching messages to the Gmail Trash after user confirmation.
+It comes in two forms that share the same code:
 
-## Overview
+* **Desktop app** (Tauri): search, review the results in a table, tick the emails you want and move them to the Trash.
+* **Command-line tool**: search, preview and move every matching email to the Trash, with a dry-run mode.
 
-Gmail Email Manager uses the **Gmail API** and **OAuth 2.0** authentication to securely connect a Google account with the application.
+The project was built to learn API integration, OAuth 2.0, asynchronous Rust and desktop packaging with Tauri.
 
-Once authenticated, the application:
+## Features
 
-1. Connects to the user's Gmail account
-2. Retrieves the authenticated user's Gmail profile
-3. Accepts a Gmail search query
-4. Retrieves all messages matching the query (following every result page)
-5. Displays the number of matching emails and a preview of the first ones
-6. Requests confirmation before making changes
-7. Moves the matching messages to the Gmail Trash in batches
+* Google account authentication with OAuth 2.0, opening the browser automatically
+* Local token storage, so authorization is only needed once
+* Full Gmail search syntax (`from:`, `older_than:`, `category:`, `has:attachment`, ...)
+* Retrieval of every matching email, following all result pages
+* Preview of sender, subject and date before anything is modified
+* Confirmation before moving emails to the Trash
+* Batch processing (up to 1000 emails per request), with a one-by-one fallback
+* Nothing is deleted permanently: emails go to the Gmail Trash, where they stay for 30 days
 
-The project focuses on learning and implementing API integration, OAuth authentication, asynchronous programming, and interaction with external cloud services using Rust.
+Desktop app only:
 
-## Application Flow
+* Per-email selection with checkboxes, and a select-all for the loaded rows
+* Search shortcuts for common filters
+* Automatic connection on start when a token already exists
+* Light and dark theme following the system setting
+
+Command-line tool only:
+
+* `--dry-run` to see what a query matches without changing anything
+* `--yes` to skip the confirmation, for scripts
+* Non-zero exit status when any email could not be moved
+
+## How It Works
 
 ```text
-┌──────────────────────────────┐
-│       Start Application      │
-└──────────────┬───────────────┘
-               ↓
 ┌──────────────────────────────┐
 │     Load Google Credentials  │
 └──────────────┬───────────────┘
                ↓
 ┌──────────────────────────────┐
 │       OAuth 2.0 Login        │
-└──────────────┬───────────────┘
-               ↓
-┌──────────────────────────────┐
-│      Connect to Gmail API    │
 └──────────────┬───────────────┘
                ↓
 ┌──────────────────────────────┐
@@ -52,7 +57,10 @@ The project focuses on learning and implementing API integration, OAuth authenti
       No results    Results
         │             │
         ↓             ↓
-      Finish      Confirmation
+      Finish    Preview / Select
+                      │
+                      ↓
+                 Confirmation
                       │
                 ┌─────┴─────┐
                 │           │
@@ -60,38 +68,157 @@ The project focuses on learning and implementing API integration, OAuth authenti
                 │           │
                 ↓           ↓
              Finish    Move to Trash
-                            │
-                            ↓
-                         Finish
 ```
 
-## Features
+## Project Structure
 
-* Google account authentication using OAuth 2.0
-* Integration with the Gmail API
-* Gmail profile verification
-* Support for Gmail search queries
-* Retrieval of every matching email message, with pagination
-* Preview (date, sender and subject) of the first matching emails
-* User confirmation before modifying emails
-* Dry-run mode to search and preview without modifying anything
-* Batch processing of matching messages (up to 1000 per request)
-* Moving emails to the Gmail Trash
-* Local token persistence for subsequent authentications
-* Asynchronous API communication
+```text
+ApiGoogleRsut/
+│
+├── src/
+│   ├── lib.rs              Gmail logic shared by both front ends
+│   └── main.rs             Command-line tool
+│
+├── ui/                     Desktop app
+│   ├── src/
+│   │   ├── index.html
+│   │   ├── main.js
+│   │   └── styles.css
+│   └── src-tauri/
+│       ├── src/lib.rs      Tauri commands that call the shared library
+│       ├── icons/
+│       └── tauri.conf.json
+│
+├── .github/workflows/rust.yml
+├── Cargo.toml
+└── README.md
+```
 
-## Gmail Search
+`src/lib.rs` holds everything that talks to Gmail (`build_hub`, `search_messages`, `fetch_preview`, `trash_messages`). The command-line tool and the desktop app are thin layers on top of it.
 
-The application supports Gmail's standard search syntax.
+## Google Configuration
 
-Examples:
+Both front ends need a Google Cloud project with:
+
+* The Gmail API enabled
+* An OAuth consent screen, with your Google account added as a test user
+* An OAuth 2.0 client of type **Desktop app**
+
+Download the client file from the Google Cloud Console and name it `credentials.json`. Where it goes depends on which front end you use (see below).
+
+## Prerequisites
+
+* [Rust](https://www.rust-lang.org/) with Cargo
+* A Google account with Gmail and the Google configuration above
+
+For the desktop app, also:
+
+* The Tauri CLI:
+
+  ```bash
+  cargo install tauri-cli --version "^2"
+  ```
+
+* The [Tauri system dependencies](https://tauri.app/start/prerequisites/) for your platform. On Windows these are the Microsoft C++ Build Tools and WebView2, which Windows 11 already includes.
+
+The desktop app has been built and tested on Windows only.
+
+## Getting the Code
+
+```bash
+git clone https://github.com/Nqxho010/ApiGoogleRsut.git
+```
+
+```bash
+cd ApiGoogleRsut
+```
+
+## Desktop App
+
+### Credentials
+
+The app reads `credentials.json` from its data folder and stores `token.json` next to it. On Windows:
+
+```text
+%APPDATA%\com.nqxho010.gmailmanager\
+```
+
+Create that folder and copy your `credentials.json` into it.
+
+### Run in development
+
+```bash
+cd ui
+```
+
+```bash
+cargo tauri dev
+```
+
+### Build the installer
+
+```bash
+cd ui
+```
+
+```bash
+cargo tauri build
+```
+
+The results are written to `ui/src-tauri/target/release/`:
+
+| File                                            | Description                  |
+| ----------------------------------------------- | ---------------------------- |
+| `ui.exe`                                        | Standalone executable        |
+| `bundle/nsis/Gmail Manager_0.1.0_x64-setup.exe` | Installer                    |
+| `bundle/msi/Gmail Manager_0.1.0_x64_en-US.msi`  | Installer in MSI format      |
+
+The installer is not code-signed, so Windows shows a SmartScreen warning the first time it runs.
+
+To change the app icon, replace the source image and regenerate every size:
+
+```bash
+cargo tauri icon path/to/logo.png
+```
+
+If the old icon still appears in the built executable, run `cargo clean --release -p ui` inside `ui/src-tauri` and build again.
+
+### Using the app
+
+1. On first start, click **Conectar con Gmail**. The browser opens on the Google authorization page; sign in and grant access. Later starts connect automatically.
+2. Type a Gmail search, or click one of the shortcuts, and press **Buscar**.
+3. The first 25 matching emails are listed. Use **Cargar más** to load the next ones.
+4. Tick the emails to remove. The checkbox in the header selects all loaded rows.
+5. Press **Mover a la papelera** and confirm. Only the ticked emails are moved.
+
+## Command-Line Tool
+
+Place `credentials.json` in the project root, then:
+
+```bash
+cargo run
+```
+
+Without arguments the tool asks for the search query, shows the first 10 matches and asks for confirmation before moving **all** matching emails to the Trash.
+
+| Option                  | Description                                             |
+| ----------------------- | ------------------------------------------------------- |
+| `-q`, `--query <QUERY>` | Gmail search query (asked interactively if omitted)     |
+| `--dry-run`             | Search and preview only, without modifying any email    |
+| `-y`, `--yes`           | Skip the confirmation prompt                            |
+| `--credentials <PATH>`  | OAuth client file (default: `credentials.json`)         |
+| `--token <PATH>`        | Where the OAuth token is stored (default: `token.json`) |
+
+To check what a query would match without changing anything:
+
+```bash
+cargo run -- --query "older_than:1y" --dry-run
+```
+
+## Gmail Search Examples
 
 ```text
 from:example@gmail.com
-```
-
-```text
-subject:newsletter
 ```
 
 ```text
@@ -99,193 +226,65 @@ from:example@gmail.com subject:invoice
 ```
 
 ```text
-older_than:1y
+category:promotions older_than:1y
 ```
-
-These queries are sent to Gmail through the API to retrieve matching messages.
-
-## Authentication
-
-The application uses **Google OAuth 2.0** to authenticate the user.
-
-The authentication flow is based on a Google Cloud project and OAuth credentials. During the first execution, the user authorizes the application through their Google account.
-
-After successful authentication, the application stores the token locally so that subsequent executions can reuse the authorization without requiring the complete authentication process again.
-
-### Required Google Configuration
-
-A Google Cloud project must be configured with:
-
-* Gmail API enabled
-* OAuth 2.0 credentials
-* A configured OAuth consent screen
-* The required Gmail API scopes
-
-The application requires a `credentials.json` file containing the Google OAuth client configuration.
-
-> **Security:** Do not commit personal Google credentials, OAuth tokens, or other sensitive authentication files to a public repository.
-
-## Prerequisites
-
-Before running the project, make sure you have:
-
-* [Rust](https://www.rust-lang.org/) installed
-* Cargo installed with Rust
-* A Google account with Gmail
-* A Google Cloud project with the Gmail API enabled
-* OAuth 2.0 credentials
-
-You can verify the Rust installation with:
-
-```bash
-rustc --version
-cargo --version
-```
-
-## Installation
-
-Clone the repository:
-
-```bash
-git clone https://github.com/Nqxho010/ApiGoogleRsut.git
-```
-
-Enter the project directory:
-
-```bash
-cd ApiGoogleRsut
-```
-
-Install and compile the project dependencies:
-
-```bash
-cargo build
-```
-
-Place the Google OAuth credentials file in the project root:
 
 ```text
-credentials.json
+is:unread has:attachment
 ```
 
-This file is ignored by Git and must never be committed.
+A date-only query such as `older_than:1y` usually matches far more than expected, including receipts and personal emails. Narrow it by sender or category, and check the results before confirming.
 
-Then run the application:
+## Development
+
+Checks for the shared library and the command-line tool, which are also what the CI workflow runs:
 
 ```bash
-cargo run
+cargo clippy --all-targets -- -D warnings
 ```
-
-## Usage
-
-When the application starts, it initializes the Google authentication process.
-
-### Command-line options
-
-| Option                 | Description                                              |
-| ---------------------- | -------------------------------------------------------- |
-| `-q`, `--query <QUERY>` | Gmail search query (asked interactively if omitted)      |
-| `--dry-run`            | Search and preview only, without modifying any email     |
-| `-y`, `--yes`          | Skip the confirmation prompt                             |
-| `--credentials <PATH>` | OAuth client file (default: `credentials.json`)          |
-| `--token <PATH>`       | Where the OAuth token is stored (default: `token.json`)  |
-
-Example, to check what a query would match without changing anything:
 
 ```bash
-cargo run -- --query "older_than:1y" --dry-run
+cargo test
 ```
 
-The program exits with a non-zero status if any email could not be moved to the Trash.
+The CI workflow does not build the desktop app. To check it locally:
 
-### 1. Authenticate with Google
-
-The application opens the Google authorization flow. Sign in with the Gmail account you want to manage and grant the required permissions.
-
-### 2. Enter a Gmail Search Query
-
-Enter the Gmail search criteria for the emails you want to find.
-
-For example:
-
-```text
-from:example@gmail.com
+```bash
+cd ui/src-tauri
 ```
 
-### 3. Review the Results
-
-The application queries the Gmail API, retrieves the messages that match the search criteria, and shows the date, sender and subject of the first 10.
-
-### 4. Confirm the Action
-
-Before modifying the mailbox, the application asks for confirmation.
-
-If the operation is confirmed, the matching messages are moved to the Gmail Trash.
-
-If the operation is cancelled, no changes are made.
+```bash
+cargo check
+```
 
 ## Technologies
 
 | Technology           | Purpose                                       |
 | -------------------- | --------------------------------------------- |
-| **Rust**             | Application logic and backend                 |
-| **Gmail API**        | Email management and communication with Gmail |
+| **Rust**             | Application logic                             |
+| **Gmail API**        | Email search and management                   |
 | **Google OAuth 2.0** | User authentication and authorization         |
 | **Tokio**            | Asynchronous runtime                          |
 | **Hyper**            | HTTP communication                            |
+| **Tauri**            | Desktop window and packaging                  |
+| **HTML, CSS, JS**    | Desktop interface                             |
 | **Clap**             | Command-line argument parsing                 |
-| **Cargo**            | Rust package management and build system      |
-
-## Project Structure
-
-```text
-ApiGoogleRsut/
-│
-├── .github/workflows/rust.yml
-├── src/
-│   └── main.rs
-│
-├── .gitignore
-├── Cargo.toml
-├── Cargo.lock
-└── README.md
-```
-
-`credentials.json`, `token.json` and `target/` live in the project root locally but are ignored by Git.
-
-The `src` directory contains the Rust application source code, while `Cargo.toml` defines the project's dependencies and configuration.
 
 ## Security Considerations
 
-Because this application interacts directly with a user's Gmail account, authentication credentials must be handled carefully.
+The application acts on a real Gmail account, so its credential files must be handled carefully.
 
-Do not upload the following files to a public repository:
-
-```text
-credentials.json
-token.json
-```
-
-Both are listed in `.gitignore`. If a credentials file was ever committed, removing it is not enough because it stays in the Git history: reset the client secret in the Google Cloud Console.
-
-The application only requests the `gmail.modify` scope, which allows moving messages to the Trash but not deleting them permanently.
+* `credentials.json` and `token.json` are listed in `.gitignore` and must never be committed. `token.json` grants access to the mailbox.
+* If a credentials file was ever committed, removing it is not enough because it stays in the Git history: reset the client secret in the Google Cloud Console.
+* The application only requests the `gmail.modify` scope, which allows moving messages to the Trash but not deleting them permanently.
 
 ## Current Limitations
 
-The current version is primarily focused on Gmail API integration, authentication, searching, and moving matching messages to the Trash.
-
-Potential future improvements include:
-
-* Graphical desktop interface
-* Advanced filtering options
-* Bulk selection controls
-* Undo functionality
-* Improved authentication management
-* Packaging the application as a standalone desktop executable
-
-## Future Development
-
-The project can be expanded into a complete desktop Gmail management tool with a graphical interface, allowing users to search, review, select, and manage emails without interacting directly with the terminal.
+* Each installation needs its own `credentials.json`, and the Google account must be a test user of the Google Cloud project. The app cannot be handed to other people as is.
+* The desktop app has only been built and tested on Windows.
+* Email previews are fetched one at a time, so loading each page of 25 takes a few seconds.
+* There is no undo inside the app; emails are restored from the Gmail Trash.
+* The desktop interface is in Spanish only.
 
 ## Author
 
